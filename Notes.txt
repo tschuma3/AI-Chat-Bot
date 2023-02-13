@@ -1,0 +1,35 @@
+Asteroids
+    -- Player
+        -- Variables
+            -- Velocity or Speed
+            -- Rotation
+            -- Keyboard inputs (Maybe)
+        -- Attributes
+            -- Health (Probably an insta-kill)
+            -- Location (x and y)
+        -- Miscellaneous
+            -- 
+    -- Enemies
+        -- Variables
+            -- Based on Type
+                -- Velocity or Speed
+                -- Rotation
+        -- Attributes
+            -- Based on Type
+                -- Health
+                -- Targeting
+                -- Velocity or Speed
+AI
+    -- Models
+        -- NEAT
+        -- Deep Q Learning
+        -- Deep Convolutional Q Learning
+        -- A3C
+    -- Libraries
+        -- PyTorch
+        -- TensorFlow
+        -- Keras
+        -- Numpy
+        -- Os, Pandas, or Pickle
+        -- MatPlotLib
+        -- Pygame
