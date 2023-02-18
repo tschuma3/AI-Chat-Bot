@@ -1,10 +1,6 @@
 import numpy as np
 import pygame
 import time
-import os
-import random
-import pickle
-import neat
 pygame.font.init()
 pygame.init()
 
@@ -20,15 +16,23 @@ STAT_FONT = pygame.font.SysFont("comicsans", 25)
 
 class Player():
 
+    #Player parameters
     def __init__(self):
         pass
 
+    #Moves the player forward
     def thrust(self):
         pass
+    
+    #Rotates the player
+    def rotating(self):
+        pass
 
+    #Lets the player shoot bullets
     def shoot(self):
         pass
 
+    #Creates the player
     def draw(self, win):
         pass
         
@@ -38,12 +42,15 @@ class Player():
 
 class Bullet():
     
+    #Bullet parameters
     def __init__(self):
         pass
 
+    #Moves the bullet
     def move(self):
         pass 
 
+    #Creates the bullets
     def draw(self, win):
         pass
 
@@ -53,12 +60,23 @@ class Bullet():
 
 class Enemy():
 
+    #Asteroid parameters
     def __init__(self):
         pass
     
+    #Sets the different asteroid types
     def asteroid_type(self):
+        pass
+
+    #Breaks the asteroids to smaller parts
+    def asteroid_break(self):
+        pass
+
+    #Moves the asteroids
+    def move(self):
         pass           
 
+    #Creates the Asteroids
     def draw(self, win):
         pass
 
@@ -66,20 +84,25 @@ class Enemy():
 
 #region Main Functions
 
+#Draws everything to the window
 def draw_window(win, score):
 
     #Draws the score
     text = STAT_FONT.render("Score: " + str(score), 1, (255, 255, 255))
     win.blit(text, (WIN_WIDTH - 10 - text.get_width(), 10))
 
+    #Updates the display
     pygame.display.update()
 
+#This is the main function for the game
 def main():
+    #Sets variables
     win = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
     clock = pygame.time.Clock()
     score = 0
     run = True
     
+    #Main game loop
     while run:
         pygame.time.delay(60)
         for event in pygame.event.get():
@@ -89,12 +112,14 @@ def main():
                 quit()
                 break
         
-        win.fill(BACKGROUND)
-
+        #Adds to the score
         score += 1
-        
+
+        #Creates the window
+        win.fill(BACKGROUND)
         draw_window(win, score)
 
+#Calls main
 main()
 
 #endregion
