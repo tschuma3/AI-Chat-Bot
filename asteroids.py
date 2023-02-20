@@ -15,27 +15,42 @@ STAT_FONT = pygame.font.SysFont("comicsans", 25)
 #region Player
 
 class Player():
+    VELOCITY = 5
+    TORQUE = 5
 
     #Player parameters
-    def __init__(self):
-        pass
+    def __init__(self, x, y, win):
+        self.rotation = np.pi / 6
+        self.dimentions = (20, 20)
+        self.health = 1
+        self.player_pos = [x, y]
+        self.player = pygame.draw.rect(win, (255, 0, 255), (self.player_pos, self.dimentions))
 
     #Moves the player forward
     def thrust(self):
-        pass
+        self.player_pos[1] += self.VELOCITY
+        print('Forward')
     
     #Rotates the player
-    def rotating(self):
-        pass
+    def rotating(self, direction):
+        if direction == "left":
+            self.player_pos = pygame.transform.rotate(self.player, self.rotation)
+            print('Turn Left')
+        elif direction == "right":
+            self.player_pos = pygame.transform.rotate(self.player, np.negative(self.rotation))
+            print('Turn Right')
 
     #Lets the player shoot bullets
     def shoot(self):
         pass
 
-    #Creates the player
-    def draw(self, win):
+    def mask(self):
         pass
         
+    #Creates the player
+    def draw(self, win):
+        win.blit(win, self.player)
+
 #endregion
 
 #region Bullet
@@ -85,7 +100,9 @@ class Enemy():
 #region Main Functions
 
 #Draws everything to the window
-def draw_window(win, score):
+def draw_window(win, score, player):
+
+    player.draw(win)
 
     #Draws the score
     text = STAT_FONT.render("Score: " + str(score), 1, (255, 255, 255))
@@ -100,24 +117,33 @@ def main():
     win = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
     clock = pygame.time.Clock()
     score = 0
+    player = Player(WIN_WIDTH / 2, WIN_HEIGHT / 2, win)
     run = True
     
     #Main game loop
     while run:
-        pygame.time.delay(60)
+        pygame.time.delay(30)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
                 pygame.quit()
                 quit()
                 break
-        
+
+        key = pygame.key.get_pressed()
+        if key[pygame.K_UP]: 
+            player.thrust()
+        elif key[pygame.K_LEFT]:
+            player.rotating("left")
+        elif key[pygame.K_RIGHT]:
+            player.rotating("right")        
+
         #Adds to the score
         score += 1
 
         #Creates the window
         win.fill(BACKGROUND)
-        draw_window(win, score)
+        draw_window(win, score, player)
 
 #Calls main
 main()
