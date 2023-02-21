@@ -1,6 +1,7 @@
 import numpy as np
 import pygame
 import time
+import os
 pygame.font.init()
 pygame.init()
 
@@ -12,62 +13,112 @@ BACKGROUND = (0, 0, 0)
 #Create fonts for the score
 STAT_FONT = pygame.font.SysFont("comicsans", 25)
 
+PLAYER_IMG = pygame.transform.scale_by(pygame.image.load(os.path.join("Images", "Kirby.png")), (0.02, 0.02))
+BULLET_IMG = pygame.transform.scale_by(pygame.image.load(os.path.join("Images", "Smash Ball.png")), (0.02, 0.02))
+
+BULLETS = []
+
 #region Player
 
 class Player():
-    VELOCITY = 5
-    TORQUE = 5
+    IMG = PLAYER_IMG
 
     #Player parameters
-    def __init__(self, x, y, win):
-        self.rotation = np.pi / 6
-        self.dimentions = (20, 20)
-        self.health = 1
-        self.player_pos = [x, y]
-        self.player = pygame.draw.rect(win, (255, 0, 255), (self.player_pos, self.dimentions))
+    def __init__(self, x, y):
+        self.angle = 0
+        self.time = pygame.time.delay(10)
+        self.velocity = (0, 0)
+        self.x = x
+        self.y = y
+        self.position = pygame.math.Vector2(self.x, self.y)
+        self.tick_count = 0
+
+        self.img = self.IMG
+        self.rect = self.img.get_rect()
 
     #Moves the player forward
     def thrust(self):
-        self.player_pos[1] += self.VELOCITY
-        print('Forward')
-    
+        print('Up')
+        velocity_x = 0
+        velocity_y = 0
+        self.velocity = 8
+        velocity_x += self.velocity * np.cos(np.radians(self.angle + 90)) 
+        velocity_y -= self.velocity * np.sin(np.radians(self.angle + 90))
+
+        self.tick_count = 0
+        self.position += (velocity_x, velocity_y)
+        self.rect.center = self.position
+
     #Rotates the player
-    def rotating(self, direction):
-        if direction == "left":
-            self.player_pos = pygame.transform.rotate(self.player, self.rotation)
-            print('Turn Left')
-        elif direction == "right":
-            self.player_pos = pygame.transform.rotate(self.player, np.negative(self.rotation))
-            print('Turn Right')
+    def rotate(self, direction):
+        self.tick_count = 0
+        self.angle += direction % 360
+        print('Rotate')
 
     #Lets the player shoot bullets
     def shoot(self):
-        pass
+        global BULLETS
+        bullet = Bullet(self.rect.centerx, self.rect.centery, self.angle)
+        BULLETS.append(bullet)
+        print('Space')
 
+    def actions(self):
+        self.tick_count += 1
+
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_UP]:
+            self.thrust()
+        if keys[pygame.K_LEFT]:
+            self.rotate(20)
+        if keys[pygame.K_RIGHT]:
+            self.rotate(-20)
+        if keys[pygame.K_SPACE]:
+            shooting = True
+            if shooting:
+                shooting = False
+                self.shoot()
+    
+    #Gives a mask for collision
     def mask(self):
         pass
         
     #Creates the player
     def draw(self, win):
-        win.blit(win, self.player)
+        blitRotateCenter(win, self.img, self.position, self.angle)
 
 #endregion
 
 #region Bullet
 
 class Bullet():
-    
+    IMG = BULLET_IMG
+
     #Bullet parameters
-    def __init__(self):
-        pass
+    def __init__(self, x, y, angle):
+        self.angle = angle
+        self.velocity = (0, 0)
+        self.x = x
+        self.y = y
+        self.position = pygame.math.Vector2(self.x, self.y)
+
+        self.img = self.IMG
+        self.rect = self.img.get_rect()
 
     #Moves the bullet
     def move(self):
-        pass 
+        velocity_x = 0
+        velocity_y = 0
+        self.velocity = 15
+        velocity_x += self.velocity * np.cos(np.radians(self.angle + 90)) 
+        velocity_y -= self.velocity * np.sin(np.radians(self.angle + 90))
+
+        self.tick_count = 0
+        self.position += (velocity_x, velocity_y)
+        self.rect.center += self.position 
 
     #Creates the bullets
     def draw(self, win):
-        pass
+        blitRotateCenter(win, self.img, self.position, self.angle)
 
 #endregion
  
@@ -99,10 +150,23 @@ class Enemy():
 
 #region Main Functions
 
+#Rotate a surface and blit it to the window
+def blitRotateCenter(surf, image, topleft, angle):
+    rotated_image = pygame.transform.rotate(image, angle)
+    new_rect = rotated_image.get_rect(center = image.get_rect(topleft = topleft).center)
+
+    surf.blit(rotated_image, new_rect.topleft)
+
 #Draws everything to the window
-def draw_window(win, score, player):
+def draw_window(win, timer, score, player, bullet):
 
     player.draw(win)
+    for bullet in BULLETS:
+        if timer >= 100:
+            BULLETS.remove(bullet)
+        bullet.draw(win)
+    
+    print(len(BULLETS))
 
     #Draws the score
     text = STAT_FONT.render("Score: " + str(score), 1, (255, 255, 255))
@@ -116,34 +180,33 @@ def main():
     #Sets variables
     win = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
     clock = pygame.time.Clock()
+    player = Player(WIN_WIDTH / 2, WIN_HEIGHT / 2)
+    bullet = Bullet(player.x, player.y, player.angle)
     score = 0
-    player = Player(WIN_WIDTH / 2, WIN_HEIGHT / 2, win)
     run = True
     
     #Main game loop
     while run:
         pygame.time.delay(30)
+        timer = clock.tick()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
                 pygame.quit()
                 quit()
-                break
-
-        key = pygame.key.get_pressed()
-        if key[pygame.K_UP]: 
-            player.thrust()
-        elif key[pygame.K_LEFT]:
-            player.rotating("left")
-        elif key[pygame.K_RIGHT]:
-            player.rotating("right")        
+                break        
 
         #Adds to the score
         score += 1
 
+        player.actions()
+
+        for bullet in BULLETS:
+            bullet.move()
+
         #Creates the window
         win.fill(BACKGROUND)
-        draw_window(win, score, player)
+        draw_window(win, timer, score, player, bullet)
 
 #Calls main
 main()
