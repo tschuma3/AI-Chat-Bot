@@ -32,7 +32,7 @@ class Player():
     def __init__(self, x, y):
         self.angle = 0
         self.time = pygame.time.delay(10)
-        self.velocity = (0, 0)
+        self.velocity = pygame.math.Vector2(15, 15)
         self.x = x
         self.y = y
         self.position = pygame.math.Vector2(self.x, self.y)
@@ -47,9 +47,8 @@ class Player():
         print('Up')
         velocity_x = 0
         velocity_y = 0
-        self.velocity = 8
-        velocity_x += self.velocity * np.cos(np.radians(self.angle + 90)) 
-        velocity_y -= self.velocity * np.sin(np.radians(self.angle + 90))
+        velocity_x += self.velocity.x * np.cos(np.radians(self.angle + 90)) 
+        velocity_y -= self.velocity.y * np.sin(np.radians(self.angle + 90))
 
         self.tick_count = 0
         self.position += (velocity_x, velocity_y)
@@ -103,7 +102,7 @@ class Bullet():
     #Bullet parameters
     def __init__(self, x, y, angle):
         self.angle = angle
-        self.velocity = (0, 0)
+        self.velocity = pygame.math.Vector2(20, 20)
         self.x = x
         self.y = y
         self.position = pygame.math.Vector2(self.x, self.y)
@@ -116,9 +115,8 @@ class Bullet():
     def move(self):
         velocity_x = 0
         velocity_y = 0
-        self.velocity = 15
-        velocity_x += self.velocity * np.cos(np.radians(self.angle + 90)) 
-        velocity_y -= self.velocity * np.sin(np.radians(self.angle + 90))
+        velocity_x += self.velocity.x * np.cos(np.radians(self.angle + 90)) 
+        velocity_y -= self.velocity.y * np.sin(np.radians(self.angle + 90))
 
         self.tick_count = 0
         self.position += (velocity_x, velocity_y)
@@ -141,11 +139,13 @@ class Enemy():
     #Asteroid parameters
     def __init__(self, x, y, angle, aster_type):
         self.angle = angle
-        self.velocity = 8
+        self.velocity = pygame.math.Vector2(0, 0)
+        self.max_speed = pygame.math.Vector2(4, 4)
         self.x = x
         self.y = y
         self.position = pygame.math.Vector2(self.x, self.y)
         self.aster_type = aster_type
+        self.count = 100
 
         self.img_magenta = self.IMG_MAGENTA
         self.img_green = self.IMG_GREEN
@@ -162,22 +162,34 @@ class Enemy():
     #Sets the different asteroid types
     def asteroid_type(self):
         if self.aster_type == 1:
-            self.velocity = 2
+            self.velocity = pygame.math.Vector2(2, 2)
         elif self.aster_type == 2:
-            self.velocity = 5
+            self.velocity = pygame.math.Vector2(5, 5)
         elif self.aster_type == 3:
-            self.velocity == 8
+            self.velocity = pygame.math.Vector2(8, 8)
 
     #Breaks the asteroids to smaller parts
-    def asteroid_targeting(self):
-        pass
+    def asteroid_targeting(self, player_position, player_velocity):
+
+        """
+        Use: https://www.youtube.com/watch?v=OxHJ-o_bbzs
+        5.4 Arrive Steering Behavior - The Nature of Code by The Coding Train for the physics 
+        """
+
+        if self.aster_type == 1:
+            desired_velocity = self.position - player_position
+            mag = pygame.math.Vector2.magnitude(self.max_speed)
+            steering = self.velocity - desired_velocity
+            self.position += steering
+            self.count = 100
+        self.count -= 1
 
     #Moves the asteroids
     def move(self):
         velocity_x = 0
         velocity_y = 0
-        velocity_x += self.velocity * np.cos(np.radians(self.angle + 90)) 
-        velocity_y -= self.velocity * np.sin(np.radians(self.angle + 90))
+        velocity_x += self.velocity.x * np.cos(np.radians(self.angle + 90)) 
+        velocity_y -= self.velocity.y * np.sin(np.radians(self.angle + 90))
 
         self.tick_count = 0
         self.position += (velocity_x, velocity_y)
@@ -232,13 +244,12 @@ def blitRotateCenter(surf, image, topleft, angle):
     surf.blit(rotated_image, new_rect.topleft)
 
 #Draws everything to the window
-def draw_window(win, timer, score, player, bullet, enemy):
+def draw_window(win, score, player, bullet, enemy):
 
     player.draw(win)
 
     for bullet in BULLETS:
-        if timer >= 100:
-            BULLETS.remove(bullet)
+        #BULLETS.remove(bullet)
         bullet.draw(win)
     print(len(BULLETS))
 
@@ -269,7 +280,6 @@ def main():
     #Main game loop
     while run:
         pygame.time.delay(30)
-        timer = clock.tick()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
@@ -287,11 +297,12 @@ def main():
         
         for enemy in ENEMIES:
             enemy.asteroid_type()
+            enemy.asteroid_targeting(player.position, player.velocity)    
             enemy.move()
 
         #Creates the window
         win.fill(BACKGROUND)
-        draw_window(win, timer, score, player, bullet, enemy)
+        draw_window(win, score, player, bullet, enemy)
 
 #Calls main
 main()
