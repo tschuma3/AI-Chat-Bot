@@ -31,12 +31,10 @@ class Player():
     #Player parameters
     def __init__(self, x, y):
         self.angle = 0
-        self.time = pygame.time.delay(10)
-        self.velocity = pygame.math.Vector2(15, 15)
-        self.x = x
-        self.y = y
-        self.position = pygame.math.Vector2(self.x, self.y)
-        self.tick_count = 0
+        self.acceleration = 2
+        self.max_speed = 25
+        self.velocity = pygame.math.Vector2(0, 0)
+        self.position = pygame.math.Vector2(x, y)
 
         self.img = self.IMG
         self.rect = self.img.get_rect()
@@ -45,19 +43,20 @@ class Player():
     #Moves the player forward
     def thrust(self):
         print('Up')
-        velocity_x = 0
-        velocity_y = 0
-        velocity_x += self.velocity.x * np.cos(np.radians(self.angle + 90)) 
-        velocity_y -= self.velocity.y * np.sin(np.radians(self.angle + 90))
-
-        self.tick_count = 0
-        self.position += (velocity_x, velocity_y)
+        acceleration_x = -self.acceleration * np.sin(np.radians(self.angle)) 
+        acceleration_y = -self.acceleration * np.cos(np.radians(self.angle))
+        self.velocity.x += acceleration_x
+        self.velocity.y += acceleration_y
+        speed = self.velocity.magnitude()
+        if speed > self.max_speed:
+            self.velocity.scale_to_length(self.max_speed)
+        self.position += self.velocity
         self.rect.center = self.position
 
     #Rotates the player
     def rotate(self, direction):
-        self.tick_count = 0
-        self.angle += direction % 360
+        self.angle += direction 
+        self.angle %= 360
         print('Rotate')
 
     #Lets the player shoot bullets
@@ -68,24 +67,18 @@ class Player():
         print('Space')
 
     def actions(self):
-        self.tick_count += 1
-
         keys = pygame.key.get_pressed()
         if keys[pygame.K_UP]:
             self.thrust()
         if keys[pygame.K_LEFT]:
-            self.rotate(20)
+            self.rotate(10)
         if keys[pygame.K_RIGHT]:
-            self.rotate(-20)
+            self.rotate(-10)
         if keys[pygame.K_SPACE]:
             shooting = True
             if shooting:
                 shooting = False
                 self.shoot()
-    
-    #Gives a mask for collision
-    def mask(self):
-        pass
         
     #Creates the player
     def draw(self, win):
@@ -102,24 +95,20 @@ class Bullet():
     #Bullet parameters
     def __init__(self, x, y, angle):
         self.angle = angle
-        self.velocity = pygame.math.Vector2(20, 20)
-        self.x = x
-        self.y = y
-        self.position = pygame.math.Vector2(self.x, self.y)
+        self.velocity = pygame.math.Vector2(5, 5)
+        self.position = pygame.math.Vector2(x, y)
 
         self.img = self.IMG
+        self.mask = pygame.mask.from_surface(self.img)
         self.rect = self.img.get_rect()
         self.dimension = self.img.get_size()
 
     #Moves the bullet
     def move(self):
-        velocity_x = 0
-        velocity_y = 0
-        velocity_x += self.velocity.x * np.cos(np.radians(self.angle + 90)) 
-        velocity_y -= self.velocity.y * np.sin(np.radians(self.angle + 90))
-
-        self.tick_count = 0
-        self.position += (velocity_x, velocity_y)
+        velocity_x = self.velocity.x * np.cos(np.radians(self.angle)) 
+        velocity_y = self.velocity.y * np.sin(np.radians(self.angle))
+        self.velocity += (velocity_x, velocity_y)
+        self.position += self.velocity
         self.rect.center += self.position 
 
     #Creates the bullets
@@ -132,41 +121,15 @@ class Bullet():
 #region Enemy
 
 class Enemy():
-    IMG_MAGENTA = ASTEROID_MAGENTA
-    IMG_GREEN = ASTEROID_GREEN
-    IMG_WHITE = ASTEROID_WHITE
 
     #Asteroid parameters
     def __init__(self, x, y, angle, aster_type):
         self.angle = angle
         self.velocity = pygame.math.Vector2(0, 0)
-        self.max_speed = pygame.math.Vector2(4, 4)
-        self.x = x
-        self.y = y
-        self.position = pygame.math.Vector2(self.x, self.y)
+        self.max_speed = 0
+        self.acceleration = 0.1
+        self.position = pygame.math.Vector2(x, y)
         self.aster_type = aster_type
-        self.count = 100
-
-        self.img_magenta = self.IMG_MAGENTA
-        self.img_green = self.IMG_GREEN
-        self.img_white = self.IMG_WHITE
-
-        self.rect_magenta = self.img_magenta.get_rect()
-        self.rect_green = self.img_green.get_rect()
-        self.rect_white = self.img_white.get_rect()
-
-        self.dimension_magenta = self.img_magenta.get_size()
-        self.dimension_green = self.img_green.get_size()
-        self.dimension_white = self.img_white.get_size()
-    
-    #Sets the different asteroid types
-    def asteroid_type(self):
-        if self.aster_type == 1:
-            self.velocity = pygame.math.Vector2(2, 2)
-        elif self.aster_type == 2:
-            self.velocity = pygame.math.Vector2(5, 5)
-        elif self.aster_type == 3:
-            self.velocity = pygame.math.Vector2(8, 8)
 
     #Breaks the asteroids to smaller parts
     def asteroid_targeting(self, player_position, player_velocity):
@@ -175,52 +138,78 @@ class Enemy():
         Use: https://www.youtube.com/watch?v=OxHJ-o_bbzs
         5.4 Arrive Steering Behavior - The Nature of Code by The Coding Train for the physics 
         """
-
-        if self.aster_type == 1:
-            desired_velocity = self.position - player_position
-            mag = pygame.math.Vector2.magnitude(self.max_speed)
-            steering = self.velocity - desired_velocity
-            self.position += steering
-            self.count = 100
-        self.count -= 1
+        #if self.aster_type == 1:
+        desired_velocity = (self.position - player_position).normalize() * self.max_speed
+        steering = self.velocity - pygame.math.Vector2(desired_velocity)
+        self.velocity += steering 
+        self.position += self.velocity
 
     #Moves the asteroids
     def move(self):
-        velocity_x = 0
-        velocity_y = 0
-        velocity_x += self.velocity.x * np.cos(np.radians(self.angle + 90)) 
-        velocity_y -= self.velocity.y * np.sin(np.radians(self.angle + 90))
+        # velocity_x = self.velocity.x * np.cos(np.radians(self.angle + 90)) 
+        # velocity_y = self.velocity.y * np.sin(np.radians(self.angle + 90))
+        # self.position += (velocity_x, velocity_y)
 
-        self.tick_count = 0
-        self.position += (velocity_x, velocity_y)
-        #self.rect.center = self.position          
+        acceleration_x = -self.acceleration * np.sin(np.radians(self.angle)) 
+        acceleration_y = -self.acceleration * np.cos(np.radians(self.angle))
+        self.velocity.x += acceleration_x
+        self.velocity.y += acceleration_y
+        speed = self.velocity.magnitude()
+        if speed > self.max_speed:
+            self.velocity.scale_to_length(self.max_speed)
+        self.position += self.velocity         
 
     #Creates the Asteroids
     def draw(self, win):
-        if self.aster_type == 1:
-            self.position = screen_wrapper(self.position, self.dimension_magenta)
-            blitRotateCenter(win, self.img_magenta, self.position, self.angle)
-        elif self.aster_type == 2:
-            self.position = screen_wrapper(self.position, self.dimension_green)
-            blitRotateCenter(win, self.img_green, self.position, self.angle)
-        elif self.aster_type == 3:
-            self.position = screen_wrapper(self.position, self.dimension_white)
-            blitRotateCenter(win, self.img_white, self.position, self.angle)
+        raise NotImplementedError
 
 class Magenta_Asteroid(Enemy):
+    IMG_MAGENTA = ASTEROID_MAGENTA
 
     def __init__(self, x, y, angle):
-        super(Enemy, self).__init__()
+        super().__init__(x, y, angle, 1)
+        self.img = self.IMG_MAGENTA
+        self.rect = self.img.get_rect()
+        self.dimension = self.img.get_size()
+        self.mask = pygame.mask.from_surface(self.img)
+        self.velocity = pygame.math.Vector2(2, 2)
+        self.max_speed = 2
+
+    def draw(self, win):
+        self.position = screen_wrapper(self.position, self.dimension)
+        blitRotateCenter(win, self.img, self.position, self.angle)
         
 class Green_Asteroid(Enemy):
+    IMG_GREEN = ASTEROID_GREEN
 
     def __init__(self, x, y, angle):
-        super(Enemy, self).__init__()
+        super().__init__(x, y, angle, 2)
+        self.img = self.IMG_GREEN
+        self.rect = self.img.get_rect()
+        self.dimension = self.img.get_size()
+        self.mask = pygame.mask.from_surface(self.img)
+        self.velocity = pygame.math.Vector2(4, 4)
+        self.max_speed = 4
+
+    def draw(self, win):
+        self.position = screen_wrapper(self.position, self.dimension)
+        blitRotateCenter(win, self.img, self.position, self.angle)
 
 class White_Asteroid(Enemy):
+    IMG_WHITE = ASTEROID_WHITE
 
     def __init__(self, x, y, angle):
-        super(Enemy, self).__init__()   
+        super().__init__(x, y, angle, 3) 
+        self.img = self.IMG_WHITE
+        self.rect = self.img.get_rect()
+        self.dimension = self.img.get_size()
+        self.mask = pygame.mask.from_surface(self.img)
+        self.velocity = pygame.math.Vector2(6, 6)
+        self.max_speed = 6
+
+    def draw(self, win):
+        self.position = screen_wrapper(self.position, self.dimension)
+        blitRotateCenter(win, self.img, self.position, self.angle)
 
 #endregion
 
@@ -249,8 +238,8 @@ def draw_window(win, score, player, bullet, enemy):
     player.draw(win)
 
     for bullet in BULLETS:
-        #BULLETS.remove(bullet)
         bullet.draw(win)
+            
     print(len(BULLETS))
 
     for enemy in ENEMIES:
@@ -269,13 +258,22 @@ def main():
     win = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
     clock = pygame.time.Clock()
     player = Player(WIN_WIDTH / 2, WIN_HEIGHT / 2)
-    bullet = Bullet(player.x, player.y, player.angle)
+    bullet = Bullet(player.position.x, player.position.y, player.angle)
     score = 0
     run = True
 
     for i in range(15):
-            enemy = Enemy(random.randrange(0, WIN_WIDTH), random.randrange(0, WIN_HEIGHT), random.randrange(0, 360), random.randrange(1, 4))
-            ENEMIES.append(enemy)
+        x = random.randrange(0, WIN_WIDTH)
+        y = random.randrange(0, WIN_HEIGHT)
+        angle = random.randrange(0, 360)
+        aster_type = random.randrange(1, 4)
+        if aster_type == 1:
+            enemy = Magenta_Asteroid(x, y, angle)
+        elif aster_type == 2:
+            enemy = Green_Asteroid(x, y, angle)
+        else:
+            enemy = White_Asteroid(x, y, angle)
+        ENEMIES.append(enemy)
     
     #Main game loop
     while run:
@@ -292,13 +290,23 @@ def main():
 
         player.actions()
 
-        for bullet in BULLETS:
-            bullet.move()
-        
         for enemy in ENEMIES:
-            enemy.asteroid_type()
             enemy.asteroid_targeting(player.position, player.velocity)    
             enemy.move()
+
+            # if pygame.sprite.collide_mask(enemy, player):
+            #     print("Dead")
+            #     ENEMIES.remove(enemy)
+
+        for bullet in BULLETS:
+            bullet.move()
+            if bullet.position.y < 0 or bullet.position.y > WIN_HEIGHT or bullet.position.x < 0 or bullet.position.x > WIN_WIDTH:
+                BULLETS.remove(bullet)
+
+            for enemy in ENEMIES:
+                if pygame.sprite.collide_mask(bullet, enemy):
+                    BULLETS.remove(bullet)
+                    ENEMIES.remove(enemy)
 
         #Creates the window
         win.fill(BACKGROUND)
